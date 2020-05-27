@@ -4,21 +4,11 @@
 
 # http://shiny.rstudio.com
 
+packrat::on()
 library(shiny)
-library(shinysky)
 library(rCharts)
 library(d3heatmap)
-
-#Create an empty container for housing the Shiny alerts 
-shiny_alert_container <- function(id) {
-  tagList(
-    tags$head(
-      singleton(tags$script(src="js/shinyalert.js"))
-    ),
-    div(id=paste(id), class='shinyalert')
-  )
-}
-
+library(leaflet)
 
 # tags$link(rel="shortcut icon" href="/favicon.ico" type="image/x-icon"),
 # <link rel="icon" href="/favicon.ico" type="image/x-icon">
@@ -76,27 +66,22 @@ shinyUI(
                             id = 'conditionedPanels',
                             tabPanel("Source Table",
                                      br(),
-                                     shiny_alert_container('sourcematrix_alert'),
-                                     shinysky::hotable("scoretable")
+                                     DT::dataTableOutput("scoretable")
                             ),                            
                             tabPanel("Source Heatmap",
                                      h3("Heatmap based on the source scorings and the penalty sliders from the sidebar"),
-                                     shiny_alert_container('source_heat_alert'),
                                      downloadButton("downloadSourceHeatmap", "Download Heatmap"),
                                      downloadButton("downloadSourceMatrix", "Download Full Matrix File"),
                                      downloadButton("downloadSourcePairwise", "Download Pairwise File"),
                                      br(),
-                                     busyIndicator("Processing...", wait = 500),
                                      d3heatmapOutput("source_heatmap", width=750, height=750)
                                      ),
                             tabPanel("Source Chord",
                                       h4("The chord diagram shows the source-relationships that fall within the low-and-high thresholds"),
                                       br(), 
-                                      shiny_alert_container('source_chord_alert'),
                                       sliderInput("chord_low", "Low Threshold for Similarity", min=0, max=1.0, value=0.7, step=0.01), 
                                       sliderInput("chord_high", "High Threshold for Similarity", min=0, max=1.0, value=1, step=0.01),
                                       br(),
-                                      busyIndicator("Processing...", wait = 500),
                                       div(id = 'jschord', class = 'jschord')
                             )
                             )
@@ -118,7 +103,7 @@ shinyUI(
                                            br(),
                                            shiny::a("Source Reference", href= "https://www.dropbox.com/s/hl3kiov5d97dt3a/source_data.txt?dl=1"),
                                            br(),
-                                           checkboxInput(inputId = "epi_demo", label = "Use demo data", value = FALSE),
+                                           checkboxInput(inputId = "epi_demo", label = "Use demo data", value = TRUE),
                                            br(),
                                            fileInput(inputId="strain_data",label="Upload Strain Data Here:",multiple=FALSE,accept=".txt"),
                                            fileInput(inputId="source_data",label="Upload Source Reference Here:",multiple=FALSE,accept=".txt"),
@@ -139,23 +124,19 @@ shinyUI(
                                            downloadButton("downloadEpiData", "Download Similarity Data"),
                                            downloadButton("downloadEpiTable", "Download Similarity Table"),
                                            downloadButton("downloadEpiHeatmap", "Download Heatmap"),
-                                           busyIndicator("Processing...", wait = 500),
                                            d3heatmapOutput("EpiHeatmap", width=1000, height=1000)
                                   ),
                                   tabPanel(title="Map", 
                                            tags$style('.leaflet {height: 600px;}'),
-                                           chartOutput("epiMap", 'leaflet')),
-                                  tabPanel(title = "Epi Chord Diagram", 
-                                           h4("This chord diagram shows the epidemiological relationships that fall within the low-and-high thresholds"),
-                                           shiny_alert_container('epi_chord_alert'),
-                                           br(), 
-                                           shiny_alert_container('source_chord_alert'),
-                                           sliderInput("chord2_low", "Low Threshold for Similarity", min=0, max=1.0, value=0.7, step=0.01), 
-                                           sliderInput("chord2_high", "High Threshold for Similarity", min=0, max=1.0, value=.95, step=0.01),
-                                           br(),
-                                           busyIndicator("Processing...", wait = 500),
-                                           div(id = 'jschord2', class = 'jschord2')
-                                  )
+                                           chartOutput("epiMap", 'leaflet'))
+                                  # tabPanel(title = "Epi Chord Diagram", 
+                                  #          h4("This chord diagram shows the epidemiological relationships that fall within the low-and-high thresholds"),
+                                  #          br(), 
+                                  #          sliderInput("chord2_low", "Low Threshold for Similarity", min=0, max=1.0, value=0.7, step=0.01), 
+                                  #          sliderInput("chord2_high", "High Threshold for Similarity", min=0, max=1.0, value=.95, step=0.01),
+                                  #          br(),
+                                  #          div(id = 'jschord2', class = 'jschord2')
+                                  # )
                              )
                             ))),
 ######################## *******************************  ************************************** ################
@@ -188,7 +169,6 @@ shinyUI(
                                            downloadButton("downloadCGFHeatmap", "Download Gene Heatmap"),
                                            downloadButton("downloadCGFTable", "Download Gene Similarity Data"),
                                            br(),
-                                           busyIndicator("Please wait... for datasets greater than 100, this can take a while", wait = 500),
                                            d3heatmapOutput("cgf_heatmap", width=1000, height=1000)) 
                                                                     
                                 )
@@ -233,7 +213,6 @@ shinyUI(
                                            downloadButton("downloadCompareTable", "Download the Comparison Table"),
                                            downloadButton("downloadCompareMatrix", "Download the Comparison Matrix"),
                                            br(),
-                                           busyIndicator("Processing...", wait = 500),
                                            sliderInput('sigma','Select the Sigma value for displaying outliers on the heatmap', min = 0.1, max = 3, step = 0.01, value = 1),
                                            d3heatmapOutput("compare_heatmap", width=1000, height=1000)
                                            ),
@@ -242,11 +221,9 @@ shinyUI(
                                            downloadButton("DL_tanglegram", "Download Tanglegram pdf"),
                                            br(),
                                            sliderInput('num_k', "Select the number of clusters", min = 1, max = 8, step = 1, value = 4),
-
 #                                            downloadButton("downloadCompareHeatmap", "Download the Heatmap"), 
 #                                            downloadButton("downloadCompareTable", "Download the Comparison Table"),
 #                                            br(),
-                                           busyIndicator("Processing...", wait = 500),
                                            plotOutput("tangle", width=1000, height=1000)
                                   )))))
 ))

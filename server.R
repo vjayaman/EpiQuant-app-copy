@@ -4,18 +4,18 @@
 #
 # http://shiny.rstudio.com
 #
-
+# packrat::on()
 library(shiny)
 library(gplots)
 library(reshape2)
 library(fossil)
-library(shinysky)
 library(RColorBrewer)
 library(markdown)
 library(rCharts)
 library(dendextend)
 library(d3heatmap)
 library(ape)
+library(DT)
 source("helpers/cgf-helper.R", local = T)
 source("helpers/chord_helper.R", local = T)
 source("helpers/compare-helper.R", local = T)
@@ -30,41 +30,22 @@ source("helpers/source-helper2.R", local = T)
 shinyServer(function(input, output, session) {
   rv <- reactiveValues()
   
-  
-  isolate(prepend_shiny_alert(session,
-                              'sourcematrix_alert',
-                              alert_sourcematrix_start_msg,
-                              alert_level='info'))
-  isolate(prepend_shiny_alert(session,
-                              'source_heat_alert',
-                              alert_sourcematrix_heat_msg,
-                              alert_level='info'))
-  
-  isolate(prepend_shiny_alert(session,
-                              'source_chord_alert',
-                              alert_sourcematrix_chord_msg,
-                              alert_level='info'))
-  isolate(prepend_shiny_alert(session,
-                              'epi_chord_alert',
-                              alert_epimatrix_chord_msg,
-                              alert_level='info'))
-  
 ##################################################################################################
 ############################ Server functions for Source Matrix ##################################
 
   
 #This code generates a table that changes depending on what is uploaded in the sidebar  
-  output$scoretable <- renderHotable({  
+  output$scoretable <- DT::renderDataTable({
       inFile <- input$source_scores
       if ((is.null(inFile)) && (input$source_demo == TRUE)) {        
         return(read.table("pub_data/sourcetest_v2.txt", header=T, sep='\t'))
       }
       read.table(inFile$datapath, header=T, sep='\t')
-    }, readOnly = F)
+    })
   
 # Reactive table for source scores that updates with the hotable input:
   
-  scoreDL <- reactive({hot.to.df(input$scoretable)})
+  scoreDL <- reactive({read.table("pub_data/sourcetest_v2.txt", header=T, sep='\t')})
 
 #  Generates a heatmap displaying source similarities  ####
   output$source_heatmap <- renderD3heatmap({
@@ -76,21 +57,20 @@ shinyServer(function(input, output, session) {
     source_heatmap(m)
   })
   # #  ** TEST ** Generates a heatmap displaying source similarities using modified equation ####
-  # output$source_heatmap2 <- renderD3heatmap({
-  #   inFile <- scoreDL()
-  #   if (is.null(inFile)) {
-  #     return(NULL)
-  #   }
-  #   m = (SourceMatrix2(source_data=inFile, mod8=input$mod8, mod7=input$mod7, mod14=input$mod14))
-  #   source_heatmap(m)
-  # })
+  output$source_heatmap2 <- renderD3heatmap({
+    inFile <- scoreDL()
+    if (is.null(inFile)) {
+      return(NULL)
+    }
+    m = (SourceMatrix2(source_data=inFile, mod8=input$mod8, mod7=input$mod7, mod14=input$mod14))
+    source_heatmap(m)
+  })
   
 ############ Download Handlers: #############################
   
   output$downloadSourceMatrix <- downloadHandler( 
     filename = c("SourceMatrix.txt"),
     content = function(file){
-      # write.table(SourceMatrix(source_data = scoreDL(), mod8=input$mod8, mod7=input$mod7, mod0=input$mod0, mod14=input$mod14), file)
       write.table((SourceMatrix(scoreDL(), mod8=input$mod8, mod7=input$mod7, mod0=input$mod0, mod14=input$mod14)), file, sep = '\t')
       })
   output$downloadSourcePairwise <- downloadHandler( 
@@ -151,7 +131,6 @@ shinyServer(function(input, output, session) {
 
 ######## Calculate the epi relations based upon the epi-input and source datasets: ######
   table <- reactive({
-    # if(is.null(input$strain_data)) && (input$epi_demo == T) 
     if ((is.null(input$strain_data) && (input$epi_demo == TRUE))) { 
       inFile <- read.table('pub_data/updated_straindata274.txt', header=T, sep='\t')  
     }     
@@ -175,8 +154,8 @@ shinyServer(function(input, output, session) {
 
 ####### Generate a map with the locations from the strain info file using rCharts and Leaflet:
    output$epiMap <- renderMap({
-     if(is.null(input$strain_data)) { inFile <- read.table('pub_data/updated_straindata274.txt', header=T, sep='\t')  }     
-      else { inFile <- read.table(input$strain_data$datapath, header=T, sep='\t') } 
+     if(is.null(input$strain_data)) { inFile <- read.table('pub_data/updated_straindata274.txt', header=T, sep='\t')  }
+      else { inFile <- read.table(input$strain_data$datapath, header=T, sep='\t') }
        return(EpiMap(inFile))
 
    })
